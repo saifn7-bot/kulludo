@@ -1,0 +1,17 @@
+name = "kulludo"
+main = "src/index.js"
+compatibility_date = "2025-06-01"
+
+# Serves the web version of the game from ../www
+[assets]
+directory = "../www"
+binding = "ASSETS"
+
+# One Durable Object per online room (SQLite-backed = available on the free plan)
+[[durable_objects.bindings]]
+name = "ROOMS"
+class_name = "Room"
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["Room"]

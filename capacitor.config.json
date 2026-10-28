@@ -1,0 +1,13 @@
+{
+  "appId": "com.kulludo.app",
+  "appName": "KulLUDO",
+  "webDir": "www",
+  "backgroundColor": "#120a33",
+  "android": {
+    "backgroundColor": "#120a33"
+  },
+  "ios": {
+    "backgroundColor": "#120a33",
+    "contentInset": "never"
+  }
+}

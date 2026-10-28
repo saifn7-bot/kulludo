@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+  <meta name="theme-color" content="#250857">
+  <meta name="description" content="KulLUDO — play Ludo with friends online, against the computer, or pass & play.">
+  <title>KulLUDO</title>
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="icon-512.png">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div id="app">
+
+  <!-- HOME -->
+  <section id="screen-home" class="screen">
+    <div class="home-top">
+      <button class="icon-btn sound-toggle" aria-label="Sound">🔊</button>
+    </div>
+    <div class="logo">
+      <svg class="crown" viewBox="0 0 120 80" aria-hidden="true">
+        <defs><linearGradient id="cg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff6c2"/><stop offset=".45" stop-color="#ffd34d"/><stop offset="1" stop-color="#c47a00"/></linearGradient></defs>
+        <path d="M12 66 L6 20 L36 42 L60 8 L84 42 L114 20 L108 66 Z" fill="url(#cg)" stroke="#6b3a00" stroke-width="4" stroke-linejoin="round"/>
+        <rect x="12" y="62" width="96" height="12" rx="5" fill="url(#cg)" stroke="#6b3a00" stroke-width="4"/>
+        <circle cx="6" cy="20" r="6" fill="#ffd34d" stroke="#6b3a00" stroke-width="3"/><circle cx="60" cy="8" r="7" fill="#ffd34d" stroke="#6b3a00" stroke-width="3"/><circle cx="114" cy="20" r="6" fill="#ffd34d" stroke="#6b3a00" stroke-width="3"/>
+        <circle cx="34" cy="54" r="5.5" fill="#e8333b" stroke="#6b3a00" stroke-width="2"/><circle cx="60" cy="50" r="7" fill="#2b7be0" stroke="#6b3a00" stroke-width="2"/><circle cx="86" cy="54" r="5.5" fill="#22a84a" stroke="#6b3a00" stroke-width="2"/>
+      </svg>
+      <h1><span>Kul</span>LUDO</h1>
+      <div class="tag">Ludo Queen</div>
+      <div class="hero-dice">
+        <div class="d3"><div class="face"><i class="pip"></i><i></i><i class="pip"></i><i class="pip"></i><i></i><i class="pip"></i><i class="pip"></i><i></i><i class="pip"></i></div></div>
+        <div class="d3"><div class="face"><i></i><i></i><i></i><i></i><i class="pip r"></i><i></i><i></i><i></i><i></i></div></div>
+      </div>
+    </div>
+    <div class="menu">
+      <button class="btn big hidden" id="btn-resume"><span class="ico">▶️</span><span class="txt">Resume game</span><span class="chev">›</span></button>
+      <button class="btn big" data-go="setup-bot"><span class="ico">🤖</span><span class="txt">Play vs Computer</span><span class="chev">›</span></button>
+      <button class="btn big green" data-go="online"><span class="ico">🌐</span><span class="txt">Play Online</span><span class="chev">›</span></button>
+      <button class="btn big blue" data-go="setup-local"><span class="ico">👥</span><span class="txt">Pass &amp; Play</span><span class="chev">›</span></button>
+      <button class="btn ghost" id="btn-rules">📖 How to play</button>
+    </div>
+  </section>
+
+  <!-- SETUP -->
+  <section id="screen-setup" class="screen">
+    <header class="bar"><button class="icon-btn back" aria-label="Back">‹</button><h2 id="setup-title">Play</h2><span></span></header>
+    <div class="card">
+      <label class="lbl">Number of players</label>
+      <div class="seg" id="seg-count"><button data-v="2">2</button><button data-v="3">3</button><button data-v="4">4</button></div>
+      <div id="color-row">
+        <label class="lbl">Your colour</label>
+        <div id="color-pick">
+          <button class="swatch c-red" data-c="red" aria-label="Red"></button>
+          <button class="swatch c-green" data-c="green" aria-label="Green"></button>
+          <button class="swatch c-yellow" data-c="yellow" aria-label="Yellow"></button>
+          <button class="swatch c-blue" data-c="blue" aria-label="Blue"></button>
+        </div>
+      </div>
+      <label class="lbl">Players</label>
+      <div id="names"></div>
+      <button class="btn big green" id="btn-start-local"><span class="ico">🎲</span><span class="txt">Start game</span><span class="chev">›</span></button>
+    </div>
+  </section>
+
+  <!-- ONLINE -->
+  <section id="screen-online" class="screen">
+    <header class="bar"><button class="icon-btn back" aria-label="Back">‹</button><h2>Play Online</h2><span></span></header>
+    <div class="card">
+      <label class="lbl" for="online-name">Your name</label>
+      <input id="online-name" maxlength="12" placeholder="Your name">
+      <button class="btn big green" id="btn-create"><span class="ico">➕</span><span class="txt">Create room</span><span class="chev">›</span></button>
+      <div class="or">or join a friend</div>
+      <div class="join-row">
+        <input id="join-code" maxlength="8" placeholder="ROOM CODE" autocapitalize="characters" autocomplete="off">
+        <button class="btn" id="btn-join">Join</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- LOBBY -->
+  <section id="screen-lobby" class="screen">
+    <header class="bar"><button class="icon-btn" id="btn-leave-lobby" aria-label="Leave">‹</button><h2>Room</h2><span></span></header>
+    <div class="card">
+      <label class="lbl">Room code</label>
+      <div class="code-row"><div id="lobby-code">——</div><button class="btn" id="btn-share">Share</button></div>
+      <p class="muted small">Friends open KulLUDO → Play Online → enter this code.</p>
+      <ul id="lobby-list"></ul>
+      <div id="lobby-actions"></div>
+      <div id="net-status" class="muted small"></div>
+    </div>
+  </section>
+
+  <!-- GAME -->
+  <section id="screen-game" class="screen">
+    <div class="topbar">
+      <button class="icon-btn" id="btn-exit" aria-label="Leave game">✕</button>
+      <div id="status"></div>
+      <button class="icon-btn sound-toggle" aria-label="Sound">🔊</button>
+    </div>
+    <div class="table">
+      <div class="panels"><div class="panel" data-pos="tl"></div><div class="panel" data-pos="tr"></div></div>
+      <div class="board-wrap"><div id="board"></div></div>
+      <div class="panels"><div class="panel" data-pos="bl"></div><div class="panel" data-pos="br"></div></div>
+    </div>
+    <div id="emoji-bar" class="hidden"><button>👍</button><button>😂</button><button>😡</button><button>😱</button><button>🔥</button><button>👏</button></div>
+    <div id="dice" class="d3" role="button" aria-label="Roll dice"><div class="face"></div></div>
+  </section>
+
+  <div id="modal" class="modal hidden"><div class="modal-box"></div></div>
+  <div id="toast" role="status"></div>
+</div>
+<script type="module" src="js/app.js"></script>
+</body>
+</html>

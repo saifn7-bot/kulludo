@@ -1,0 +1,25 @@
+{
+  "name": "kulludo",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "KulLUDO — Ludo for Android & iOS (Capacitor) with free online rooms on Cloudflare",
+  "scripts": {
+    "test": "node scripts/test-core.mjs",
+    "web": "npx --yes http-server www -p 8080 -c-1",
+    "android": "node scripts/prepare-native.mjs android && npx cap open android",
+    "ios": "node scripts/prepare-native.mjs ios && npx cap open ios",
+    "sync": "npx cap sync",
+    "server:dev": "cd server && npm install && npx wrangler dev",
+    "server:deploy": "cd server && npm install && npx wrangler deploy"
+  },
+  "dependencies": {
+    "@capacitor/android": "^8.5.0",
+    "@capacitor/core": "^8.5.0",
+    "@capacitor/ios": "^8.5.0"
+  },
+  "devDependencies": {
+    "@capacitor/assets": "^3.0.5",
+    "@capacitor/cli": "^8.5.0"
+  }
+}

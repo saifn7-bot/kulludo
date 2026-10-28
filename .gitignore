@@ -1,0 +1,8 @@
+node_modules/
+server/node_modules/
+server/.wrangler/
+android/
+ios/
+*.keystore
+*.jks
+.DS_Store

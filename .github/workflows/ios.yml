@@ -1,0 +1,104 @@
+name: iOS build (no Mac needed)
+
+# Runs on GitHub's macOS machines. Public repos: free. Private repos: macOS
+# minutes count 10x against your free 2,000 minutes/month.
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ['www/**', 'capacitor.config.json', 'assets/**', '.github/workflows/ios.yml']
+
+jobs:
+  ios:
+    runs-on: macos-15
+    env:
+      HAS_SIGNING: ${{ secrets.IOS_CERTIFICATE_P12_BASE64 != '' }}
+      HAS_ASC: ${{ secrets.APP_STORE_CONNECT_KEY_ID != '' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install
+        run: npm install
+
+      - name: Create iOS project
+        run: node scripts/prepare-native.mjs ios
+
+      # 1) Always: check the app compiles (simulator build, no Apple account needed)
+      - name: Build for simulator
+        run: |
+          xcodebuild -project ios/App/App.xcodeproj -scheme App -configuration Debug \
+            -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' \
+            -derivedDataPath build CODE_SIGNING_ALLOWED=NO build
+          cd build/Build/Products/Debug-iphonesimulator && zip -qr $GITHUB_WORKSPACE/KulLUDO-simulator.zip App.app
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: KulLUDO-ios-simulator
+          path: KulLUDO-simulator.zip
+
+      # 2) With an Apple Developer account: signed build → TestFlight / App Store.
+      #    Add the secrets listed in README → "iOS without a Mac".
+      - name: Install signing certificate + profile
+        if: env.HAS_SIGNING == 'true'
+        env:
+          P12_BASE64: ${{ secrets.IOS_CERTIFICATE_P12_BASE64 }}
+          P12_PASSWORD: ${{ secrets.IOS_CERTIFICATE_PASSWORD }}
+          PROFILE_BASE64: ${{ secrets.IOS_PROVISION_PROFILE_BASE64 }}
+        run: |
+          KEYCHAIN=$RUNNER_TEMP/build.keychain-db
+          echo "$P12_BASE64" | base64 --decode > $RUNNER_TEMP/cert.p12
+          echo "$PROFILE_BASE64" | base64 --decode > $RUNNER_TEMP/profile.mobileprovision
+          security create-keychain -p temp "$KEYCHAIN"
+          security set-keychain-settings -lut 21600 "$KEYCHAIN"
+          security unlock-keychain -p temp "$KEYCHAIN"
+          security import $RUNNER_TEMP/cert.p12 -P "$P12_PASSWORD" -A -t cert -f pkcs12 -k "$KEYCHAIN"
+          security set-key-partition-list -S apple-tool:,apple: -k temp "$KEYCHAIN"
+          security list-keychain -d user -s "$KEYCHAIN"
+          mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
+          UUID=$(/usr/libexec/PlistBuddy -c "Print UUID" /dev/stdin <<< "$(security cms -D -i $RUNNER_TEMP/profile.mobileprovision)")
+          NAME=$(/usr/libexec/PlistBuddy -c "Print Name" /dev/stdin <<< "$(security cms -D -i $RUNNER_TEMP/profile.mobileprovision)")
+          cp $RUNNER_TEMP/profile.mobileprovision ~/Library/MobileDevice/Provisioning\ Profiles/$UUID.mobileprovision
+          echo "PROFILE_NAME=$NAME" >> $GITHUB_ENV
+
+      - name: Archive + export signed IPA
+        if: env.HAS_SIGNING == 'true'
+        env:
+          TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          xcodebuild -project ios/App/App.xcodeproj -scheme App -configuration Release \
+            -destination 'generic/platform=iOS' -archivePath $RUNNER_TEMP/App.xcarchive archive \
+            CODE_SIGN_STYLE=Manual DEVELOPMENT_TEAM=$TEAM_ID \
+            CODE_SIGN_IDENTITY="Apple Distribution" PROVISIONING_PROFILE_SPECIFIER="$PROFILE_NAME"
+          cat > $RUNNER_TEMP/ExportOptions.plist <<PLIST
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0"><dict>
+            <key>method</key><string>app-store-connect</string>
+            <key>teamID</key><string>$TEAM_ID</string>
+            <key>signingStyle</key><string>manual</string>
+            <key>provisioningProfiles</key><dict><key>com.kulludo.app</key><string>$PROFILE_NAME</string></dict>
+          </dict></plist>
+          PLIST
+          xcodebuild -exportArchive -archivePath $RUNNER_TEMP/App.xcarchive \
+            -exportOptionsPlist $RUNNER_TEMP/ExportOptions.plist -exportPath $RUNNER_TEMP/export
+
+      - uses: actions/upload-artifact@v4
+        if: env.HAS_SIGNING == 'true'
+        with:
+          name: KulLUDO-ios-ipa
+          path: ${{ runner.temp }}/export/*.ipa
+
+      - name: Upload to TestFlight
+        if: env.HAS_SIGNING == 'true' && env.HAS_ASC == 'true'
+        env:
+          ASC_KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+          ASC_KEY_P8: ${{ secrets.APP_STORE_CONNECT_KEY_P8 }}
+        run: |
+          mkdir -p ~/.appstoreconnect/private_keys
+          echo "$ASC_KEY_P8" > ~/.appstoreconnect/private_keys/AuthKey_$ASC_KEY_ID.p8
+          xcrun altool --upload-app -f $RUNNER_TEMP/export/*.ipa -t ios --apiKey $ASC_KEY_ID --apiIssuer $ASC_ISSUER_ID
