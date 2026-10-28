@@ -26,6 +26,10 @@ if (platform === 'android') {
   console.log(`Android version ${version} (code ${versionCode})`);
   const f = 'android/app/src/main/AndroidManifest.xml';
   let x = readFileSync(f, 'utf8');
+  if (!x.includes('android.permission.VIBRATE')) {
+    x = x.replace('</manifest>', '    <uses-permission android:name="android.permission.VIBRATE" />\n</manifest>');
+    writeFileSync(f, x);
+  }
   if (!x.includes('screenOrientation')) {
     x = x.replace(/<activity\b/, '<activity\n            android:screenOrientation="portrait"');
     writeFileSync(f, x);

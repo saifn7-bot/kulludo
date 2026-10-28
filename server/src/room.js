@@ -1,6 +1,7 @@
 // One Durable Object per room code. It owns the lobby, the dice and the rules,
 // so players can't cheat by changing the app. Uses the same core.js as the app.
 import * as L from '../../www/js/core.js';
+import { cleanName, ALLOWED_EMOJI } from '../../www/js/moderation.js';
 
 const TURN_MS = 25_000; // keep in sync with TURN_SECONDS in www/js/config.js
 const BOT_NAMES = ['Aisha', 'Rohan', 'Zara', 'Kabir', 'Meera', 'Omar', 'Sana', 'Arjun'];
@@ -77,7 +78,12 @@ export class Room {
         break;
       case 'emoji': {
         const p = this.game && this.game.players.find(x => x.id === pid);
-        if (p && typeof m.e === 'string' && m.e.length <= 8) this.broadcast({ t: 'emoji', color: p.color, e: m.e });
+        const now = Date.now();
+        const lp = this.players.find(x => x.id === pid);
+        if (p && lp && ALLOWED_EMOJI.includes(m.e) && now - (lp.lastEmoji || 0) > 1500) { // 1 emoji per 1.5s
+          lp.lastEmoji = now;
+          this.broadcast({ t: 'emoji', color: p.color, id: pid, e: m.e });
+        }
         break;
       }
     }
@@ -85,7 +91,7 @@ export class Room {
 
   join(ws, { pid, name }) {
     pid = String(pid || '').slice(0, 64);
-    name = String(name || 'Player').trim().slice(0, 12) || 'Player';
+    name = cleanName(name);
     if (!pid) return this.sendTo(ws, { t: 'error', msg: 'Missing player id' });
     let p = this.players.find(x => x.id === pid);
     if (!p) {

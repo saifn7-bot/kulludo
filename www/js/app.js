@@ -4,6 +4,7 @@ import { BoardView, ROTATION, panelPos } from './board.js';
 import { LocalGame, OnlineGame, newRoomCode } from './controllers.js';
 import { sfx, isSoundOn, setSound } from './sound.js';
 import { TURN_SECONDS } from './config.js';
+import { cleanName } from './moderation.js';
 
 const $ = (q, el = document) => el.querySelector(q);
 const $$ = (q, el = document) => [...el.querySelectorAll(q)];
@@ -298,9 +299,45 @@ function tick() {
   $$('.panel').forEach(p => p.style.setProperty('--t', p.classList.contains('active') ? frac : 0));
 }
 
+// ---------------- online: terms, mute, report ----------------
+const SUPPORT_EMAIL = 'mohammedsaif1989@gmail.com';
+function muted() { try { return JSON.parse(store.get('kl_muted', '[]')) || []; } catch { return []; } }
+function setMuted(list) { store.set('kl_muted', JSON.stringify(list.slice(-200))); }
+
+// Google Play / App Store: players must accept the terms before playing online.
+function withTerms(go) {
+  if (store.get('kl_terms') === '1') return go();
+  modal(`<h2>Before you play online</h2>
+    <p class="muted" style="text-align:left">Be kind. No offensive nicknames, bullying or cheating. You can mute or report any player by tapping their name during a game.</p>
+    <p style="text-align:left">By continuing you agree to our <a class="legal-link" href="terms.html">Terms of Service</a> and <a class="legal-link" href="privacy.html">Privacy Policy</a>.</p>`,
+    [{ label: 'Cancel', cls: 'ghost' }, { label: 'I agree', onClick: () => { store.set('kl_terms', '1'); go(); } }]);
+}
+
+// Tap a player's panel in an online game → mute or report them.
+function playerOptions(color) {
+  if (!ctrl || ctrl.mode !== 'online' || !shown) return;
+  const p = shown.players.find(x => x.color === color);
+  if (!p || p.kind === 'bot' || p.id === ctrl.pid) return;
+  const isMuted = muted().includes(p.id);
+  modal(`<h2>${escapeHtml(p.name)}</h2><p class="muted">What would you like to do?</p>`, [
+    { label: isMuted ? '🔔 Unmute' : '🔇 Mute', cls: 'ghost', onClick: () => {
+      setMuted(isMuted ? muted().filter(x => x !== p.id) : [...muted(), p.id]);
+      toast(isMuted ? `${p.name} unmuted` : `${p.name} muted — you won't see their emojis`);
+    } },
+    { label: '🚩 Report', cls: 'red', onClick: () => {
+      setMuted([...new Set([...muted(), p.id])]);
+      const body = `Room: ${ctrl.room}%0APlayer nickname: ${encodeURIComponent(p.name)}%0APlayer ID: ${p.id}%0AReason: (please describe)`;
+      window.open(`mailto:${SUPPORT_EMAIL}?subject=${encodeURIComponent('KulLUDO player report')}&body=${body}`, '_system');
+      toast('Thanks — player muted and report opened in your email app', 2600);
+    } },
+  ]);
+}
+
 // ---------------- online ----------------
 function connectOnline(room) {
-  const name = $('#online-name').value.trim() || 'Player';
+  const typed = $('#online-name').value.trim();
+  const name = cleanName(typed);
+  if (typed && name !== typed.slice(0, 12)) { toast('Please choose a different nickname'); $('#online-name').focus(); return; }
   store.set('kl_name', name);
   const g = new OnlineGame({ room, name });
   lobbyInfo = null;
@@ -315,6 +352,7 @@ function connectOnline(room) {
   };
   g.onStatus = st => { $('#net-status').textContent = st === 'online' ? '' : st === 'connecting' ? 'Connecting…' : 'Reconnecting…'; };
   g.onEmoji = m => {
+    if (m.id && muted().includes(m.id)) return;
     const el = $(`.panel[data-color="${m.color}"] .bubble`);
     if (!el) return;
     el.textContent = m.e;
@@ -391,13 +429,14 @@ function init() {
   $('#btn-start-local').onclick = startLocal;
 
   $('#online-name').value = store.get('kl_name', '');
-  $('#btn-create').onclick = () => connectOnline(newRoomCode());
+  $('#btn-create').onclick = () => withTerms(() => connectOnline(newRoomCode()));
   $('#btn-join').onclick = () => {
     const code = $('#join-code').value.trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
     if (code.length < 4) { toast('Enter the room code'); return; }
-    connectOnline(code);
+    withTerms(() => connectOnline(code));
   };
   $('#btn-share').onclick = shareCode;
+  $$('.panel').forEach(el => el.addEventListener('click', e => { if (!e.target.closest('#dice') && el.dataset.color) playerOptions(el.dataset.color); }));
   $('#btn-leave-lobby').onclick = () => { if (ctrl) ctrl.stop(); ctrl = null; show('online'); };
 
   $('#btn-exit').onclick = () => modal('<h2>Leave game?</h2><p class="muted">' +
