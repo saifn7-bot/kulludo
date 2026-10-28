@@ -1,6 +1,6 @@
 // ⚙️ After you deploy the server (see README → "Deploy the online server"),
 // put your Worker address here, e.g. 'https://kulludo.your-name.workers.dev'
-export const SERVER_URL = 'https://kulludo.YOUR-SUBDOMAIN.workers.dev';
+export const SERVER_URL = 'https://kulludo.saifn7.workers.dev';
 
 // Inside the Android/iOS app the page is served from "localhost" with no port,
 // so we must use SERVER_URL. In a normal browser (the Cloudflare-hosted web

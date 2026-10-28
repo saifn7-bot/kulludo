@@ -15,9 +15,9 @@ jobs:
       HAS_SIGNING: ${{ secrets.IOS_CERTIFICATE_P12_BASE64 != '' }}
       HAS_ASC: ${{ secrets.APP_STORE_CONNECT_KEY_ID != '' }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
           node-version: 22
 
@@ -35,7 +35,7 @@ jobs:
             -derivedDataPath build CODE_SIGNING_ALLOWED=NO build
           cd build/Build/Products/Debug-iphonesimulator && zip -qr $GITHUB_WORKSPACE/KulLUDO-simulator.zip App.app
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v5
         with:
           name: KulLUDO-ios-simulator
           path: KulLUDO-simulator.zip
@@ -86,7 +86,7 @@ jobs:
           xcodebuild -exportArchive -archivePath $RUNNER_TEMP/App.xcarchive \
             -exportOptionsPlist $RUNNER_TEMP/ExportOptions.plist -exportPath $RUNNER_TEMP/export
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v5
         if: env.HAS_SIGNING == 'true'
         with:
           name: KulLUDO-ios-ipa
